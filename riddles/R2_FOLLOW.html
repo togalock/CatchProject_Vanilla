@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%;">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Piano Tiles</title>
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.3/css/bulma.min.css">
+</head>
+
+<body style="height: 100%;">
+  <div class="container">
+    <h4 class="title is-4">Piano Tiles</h4>
+    <p id="instruction">Click the falling black tiles. Don't touch the white tiles!</p>
+  </div>
+
+  <div class="is-flex m-auto" style="position: relative; height: 80%; width: 90%;">
+    <div class="container is-flex is-flex-direction-column" id="c1">
+      <button class="button container mx-0 has-background-grey-light" id="c1r1"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c1r2"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c1r3"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c1r4"></button>
+    </div>
+    <div class="container is-flex is-flex-direction-column" id="c2">
+      <button class="button container mx-0 has-background-grey-light" id="c2r1"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c2r2"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c2r3"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c2r4"></button>
+    </div>
+    <div class="container is-flex is-flex-direction-column" id="c3">
+      <button class="button container mx-0 has-background-grey-light" id="c3r1"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c3r2"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c3r3"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c3r4"></button>
+    </div>
+    <div class="container is-flex is-flex-direction-column" id="c4">
+      <button class="button container mx-0 has-background-grey-light" id="c4r1"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c4r2"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c4r3"></button>
+      <button class="button container mx-0 has-background-grey-light" id="c4r4"></button>
+    </div>
+  </div>
+
+  <script>
+    const COLUMNS = 4;
+    const ROWS = 4;
+    const PATTERN_LENGTH = 10;
+    let current_pattern = [];
+    let button_rows = [[], [], [], []];
+
+    function generate_pattern(columns = COLUMNS, pattern_length = PATTERN_LENGTH) {
+      let pattern = [];
+      for (let i = 0; i < PATTERN_LENGTH; i++) {
+        pattern.push(Math.floor(Math.random() * COLUMNS) + 1);
+      }
+
+      return pattern;
+    }
+
+    for (let row = 1; row <= ROWS; row++) {
+      for (let column = 1; column <= COLUMNS; column++) {
+        button_rows[row - 1][column - 1] = document.getElementById(`c${column}r${row}`);
+      }
+    }
+
+    function button_toggle(button, is_light = false, is_red = false) {
+      let class_to_remove = (is_light) ? "has-background-black" : "has-background-grey-light";
+      let class_to_add = (!is_light) ? "has-background-black" : "has-background-grey-light";
+      button.classList.remove(class_to_remove);
+      button.classList.add(class_to_add);
+
+      if (is_red) {
+        button.classList.add("has-background-danger");
+      }
+      else {
+        button.classList.remove("has-background-danger");
+      }
+    }
+
+    function show_pattern(pattern = undefined) {
+      if (!!!pattern) {
+        pattern = current_pattern;
+      }
+
+      let pattern_visible = pattern.slice(-ROWS);
+      let index_delta = ROWS - pattern_visible.length;
+
+      for (let row = 0; row < ROWS; row++) {
+      for (let column = 0; column < COLUMNS; column++) {
+          let is_dark = (row - index_delta < pattern_visible.length) && (column == pattern_visible[row - index_delta] - 1);
+          button_toggle(button_rows[row][column], !is_dark);
+        }
+      }
+    }
+
+    function reset_game() {
+      current_pattern = generate_pattern();
+      show_pattern();
+    }
+
+    function on_task_ok() {
+      console.log("SIGNAL OUT: TASK_OK");
+      window.parent.postMessage("TASK_OK", "*");
+    }
+
+    function on_button_click(button_number, button) {
+      let correct_button = current_pattern.slice(-1);
+      if (button_number == correct_button) {
+        current_pattern.pop();
+        show_pattern();
+      }
+      else {
+        button_toggle(button, false, true);
+        setTimeout(() => {
+          reset_game();
+          show_pattern();
+        }, 1000);
+      }
+
+      if (current_pattern.length <= 0) {
+        on_task_ok();
+      }
+    }
+
+    for (let column = 0; column < COLUMNS; column++) {
+      let button = button_rows[ROWS - 1][column];
+      button.addEventListener(
+        "click", () => {on_button_click(column + 1, button);}
+      );
+    }
+    
+    function on_message(messageEvent) {
+      let message = messageEvent.data;
+      console.log(`SIGNAL IN: ${message}`);
+      if (message == "TASK_INIT") {
+        reset_game();
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", reset_game);
+    window.addEventListener("message", on_message);
+  </script>
+
+
+</body>
+</html>

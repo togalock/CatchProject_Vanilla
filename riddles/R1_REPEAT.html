@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%; width: 100%;">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repeat</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/bulma/css/bulma.min.css">
+</head>
+
+<body style="height: 100%; width: 100%; overflow: hidden;">
+  <div class="container py-1">
+    <h4 class="title is-4">Simon Says</h4>
+
+    <p class="notification is-warning has-text-centered" id="instruction">
+      Initializing...
+    </p>
+
+  </div>
+
+  <div class="py-1 m-auto has-background-grey-dark" style="width: fit-content; border-radius: 5px;">
+    <div class="is-flex is-flex-direction-column">
+      <div class="container is-flex" id="row-1">
+        <button class="m-3 is-large button is-primary is-light" id="button-1">1</button>
+        <button class="m-3 is-large button is-danger is-light" id="button-2">2</button>
+      </div>
+      <div class="container is-flex" id="row-2">
+        <button class="m-3 is-large button is-warning is-light" id="button-3">3</button>
+        <button class="m-3 is-large button is-info is-light" id="button-4">4</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container py-2 has-text-centered">
+    <button class="button" id="button-reset">Reset</button>
+  </div>
+
+  <script>
+    const LEVEL_LENGTH = 2;
+    const SEQUENCE_LEVELS = 4;
+    const BUTTONS = [
+      "button-1", "button-2", "button-3", "button-4",
+    ].map((_id) => document.getElementById(_id));
+    const RESET_BUTTON = document.getElementById("button-reset");
+    const INSTRUCTIONS_BOX = document.getElementById("instruction");
+    
+    const FLASH_INTERVAL = 350;
+    const SHOW_FLASH_DURATION = 1000;
+    const PRESS_FLASH_DURATION = 500;
+    const LEVEL_HOLD_DURATION = 750;
+
+    let sequence = [];
+    let sequence_pointer = 0;
+    let up_to_index = 0;
+    let current_level = 0;
+    let allow_input = false;
+
+    // Game Logic
+    function generate_sequence(sequence_length, max_number = BUTTONS.length) {
+      let res = [];
+      for (let i = 0; i < sequence_length; i++) {
+        res.push(Math.floor(Math.random() * max_number));
+      }
+      return res;
+    }
+
+    function flash_button(button, duration = SHOW_FLASH_DURATION) {
+      button.classList.remove("is-light");
+      setTimeout(() => button.classList.add("is-light"), duration);
+    }
+    
+
+    function show_message(message, bar_color = "blue") {
+      const colors = {
+        "red": "is-danger", 
+        "green": "is-success", 
+        "blue": "is-info", 
+        "yellow": "is-warning"};
+      for (let color of Object.values(colors)) {
+        INSTRUCTIONS_BOX.classList.remove(color);
+      }
+      INSTRUCTIONS_BOX.innerHTML = message;
+      INSTRUCTIONS_BOX.classList.add(colors[bar_color]);
+    }
+
+    function show_sequence(up_to) {
+      allow_input = false;
+      for (let i = 0; i < up_to; i++) {
+        setTimeout(flash_button, i * (SHOW_FLASH_DURATION + FLASH_INTERVAL), 
+        BUTTONS[sequence[i]], FLASH_INTERVAL);
+      }
+      setTimeout(after_show_sequence, up_to * (SHOW_FLASH_DURATION + FLASH_INTERVAL));
+    }
+
+    function on_game_reset() {
+      sequence = generate_sequence(SEQUENCE_LEVELS * LEVEL_LENGTH);
+      load_level(1);
+    }
+
+    function load_level(level) {
+      current_level = level;
+      if (current_level <= SEQUENCE_LEVELS) {
+        up_to_index = current_level * LEVEL_LENGTH;
+        show_message(`Level ${level}/${SEQUENCE_LEVELS}. Watch and Remember.`, "yellow");
+        show_sequence(up_to_index);
+      }
+      else {
+        on_task_ok();
+      }
+    }
+
+    function after_show_sequence() {
+      allow_input = true;
+      sequence_pointer = 0;
+      show_message("Repeat the pattern.", "green");
+    }
+
+    function on_button_click(button_id) {
+      if (allow_input) {
+        if (button_id == sequence[sequence_pointer]) {
+          sequence_pointer++;
+          show_message(`${sequence_pointer} / ${up_to_index} accepted...`, "blue");
+
+          if (sequence_pointer >= up_to_index) {
+            allow_input = false;
+            show_message(`Level ${current_level} clear. Proceeding...`, "green");
+            setTimeout(load_level, LEVEL_HOLD_DURATION, current_level + 1);
+          }
+        }
+
+        else {
+          allow_input = false;
+          show_message(`Incorrect sequence. Try again.`, "red");
+          setTimeout(on_game_reset, LEVEL_HOLD_DURATION);
+        } 
+      }
+    }
+
+    for (let i = 0; i < BUTTONS.length; i++) {
+      BUTTONS[i].addEventListener("click", () => {on_button_click(i);});
+    }
+
+    RESET_BUTTON.addEventListener("click", on_game_reset);
+
+    // Game Handlers
+    function on_task_ok() {
+      show_message("Well done! You have completed the task!", "green");
+      console.log("SIGNAL OUT: TASK_OK");
+      window.parent.postMessage("TASK_OK", "*");
+    }
+
+    function on_window_message(messageEvent) {
+      let message = messageEvent.data;
+      console.log(`SIGNAL IN: ${message}`);
+      if (message == "TASK_INIT") {
+        on_game_reset();
+      }
+    }
+
+    window.addEventListener("message", on_window_message);
+    window.addEventListener("DOMContentLoaded", on_game_reset);
+  </script>
+</body>
+</html>
