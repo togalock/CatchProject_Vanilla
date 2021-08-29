@@ -1,0 +1,30 @@
+* {
+  box-sizing: border-box !important;
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow: auto;
+  background-color: black;
+}
+
+.app, .lmap {
+  height: 100%;
+  width: 100%;
+  max-width: 500px;
+  margin: auto;
+}
+
+.leaflet-tooltip-top:before,
+.leaflet-tooltip-bottom:before,
+.leaflet-tooltip-left:before,
+.leaflet-tooltip-right:before {
+  border: 0;
+}
+
+.leaflet-tooltip-pane .nobox {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
